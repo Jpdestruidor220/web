@@ -1,6 +1,6 @@
 import logo from '../../assets/logo.svg';
-import React, { useEffect, useState, ChangeEvent } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState, ChangeEvent, FormEvent } from 'react';
+import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { FiArrowLeft } from 'react-icons/fi';
 import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import axios from 'axios';
@@ -19,8 +19,8 @@ interface IBGEUFResponse {
     sigla: string;
 }
 
-interface IBGECityResponse{
-    nome:string;
+interface IBGECityResponse {
+    nome: string;
 }
 
 const CreatePoint = () => {
@@ -28,9 +28,19 @@ const CreatePoint = () => {
     const [ufs, setUfs] = useState<string[]>([]);
     const [cities, setCities] = useState<string[]>([]);
 
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        whatsapp: '',
+
+    })
+    const [selectedItems, setSelectedItems] = useState<number[]>([]);
     const [selectedUf, setSelectedUf] = useState('0');
     const [selectedCity, setSelectedCity] = useState('0');
-    const [selectedPosition, setSelectedPosition] = useState<[number, number]>([0,0]);
+    const [selectedPosition, setSelectedPosition] = useState<[number, number]>([0, 0]);
+    
+    const navigate = useNavigate();
+    
 
     useEffect(() => {
         api.get('items').then(response => {
@@ -73,29 +83,77 @@ const CreatePoint = () => {
         setSelectedCity(city);
     }
 
-    function handleMapClick(event: LeafletMouseEvent){
+    function handleInputChange(event: ChangeEvent<HTMLInputElement>) {
+        const { name, value } = event.target;
+
+        setFormData({ ...formData, [name]: value })
+    }
+
+    function handleMapClick(event: LeafletMouseEvent) {
         setSelectedPosition([
             event.latlng.lat,
             event.latlng.lng,
         ])
     }
 
-    function handleTeste(){
+    function handleTeste() {
         console.log("Teste");
     }
 
     function LocationMarker() {
         // const [position, setPosition] = useState<[number, number]>([0, 0]);
 
-        useMapEvents({  
+        useMapEvents({
             click(e: LeafletMouseEvent) {
                 setSelectedPosition([e.latlng.lat, e.latlng.lng]);
             }
         });
-      
+
         return selectedPosition === null ? null : (
-          <Marker position={selectedPosition} />
+            <Marker position={selectedPosition} />
         )
+    }
+
+    function handleSelectItem(id: number) {
+        const alreadySelected = selectedItems.findIndex(item => item === id);
+
+        if (alreadySelected >= 0) {
+            const filteredItems = selectedItems.filter(item => item !== id)
+
+            setSelectedItems(filteredItems);
+        } else {
+            setSelectedItems([...selectedItems, id]);
+
+        }
+
+    }
+
+    async function handleSubmit(event: FormEvent){
+        event.preventDefault();
+
+        const { name, email, whatsapp } = formData;
+        const uf = selectedUf;
+        const city = selectedCity;
+        const [latitude, longitude] = selectedPosition;
+        const items = selectedItems;
+
+        const data = {
+            name,
+            email,
+            whatsapp,
+            uf,
+            city,
+            latitude,
+            longitude,
+            items
+        };
+
+        await api.post('points', data);
+
+        alert('Ponto de coleta criado!');
+
+        navigate('/');
+
     }
 
     return (
@@ -109,7 +167,7 @@ const CreatePoint = () => {
                 </Link>
             </header>
 
-            <form>
+            <form onSubmit={handleSubmit}>
                 <h1>Cadastro do <br /> ponto de coleta</h1>
 
                 <fieldset>
@@ -123,6 +181,7 @@ const CreatePoint = () => {
                             type="text"
                             name="name"
                             id="name"
+                            onChange={handleInputChange}
                         />
                     </div>
 
@@ -133,6 +192,7 @@ const CreatePoint = () => {
                                 type="email"
                                 name="email"
                                 id="email"
+                                onChange={handleInputChange}
                             />
                         </div>
                         <div className="field">
@@ -141,6 +201,7 @@ const CreatePoint = () => {
                                 type="text"
                                 name="whatsapp"
                                 id="whatsapp"
+                                onChange={handleInputChange}
                             />
                         </div>
                     </div>
@@ -152,7 +213,7 @@ const CreatePoint = () => {
                         <span>Selecione o endereço no mapa</span>
                     </legend>
 
-                    <MapContainer center={[-20.4237011,-42.9124945]} zoom={15}>
+                    <MapContainer center={[-20.41923570907382, -42.91273444890976]} zoom={15}>
                         <TileLayer
                             attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
                             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -176,8 +237,8 @@ const CreatePoint = () => {
 
                         <div className="field">
                             <label htmlFor="city">Cidade</label>
-                            <select 
-                                name="city" 
+                            <select
+                                name="city"
                                 id="city"
                                 value={selectedCity}
                                 onChange={handleSelectedCity}>
@@ -197,7 +258,10 @@ const CreatePoint = () => {
                     </legend>
                     <ul className="items-grid">
                         {items.map(items => (
-                            <li key={items.id}>
+                            <li key={items.id}
+                                onClick={() => handleSelectItem(items.id)}
+                                className={selectedItems.includes(items.id) ? 'selected' : ''}
+                            >
                                 <img src={items.image_url} alt={items.title} />
                                 <span>{items.title}</span>
                             </li>
