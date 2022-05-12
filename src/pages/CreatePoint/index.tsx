@@ -2,7 +2,7 @@ import logo from '../../assets/logo.svg';
 import React, { useEffect, useState, ChangeEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { FiArrowLeft } from 'react-icons/fi';
-import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, useMapEvents } from 'react-leaflet';
 import axios from 'axios';
 import { LeafletMouseEvent } from 'leaflet';
 import api from '../../services/api';
@@ -80,6 +80,24 @@ const CreatePoint = () => {
         ])
     }
 
+    function handleTeste(){
+        console.log("Teste");
+    }
+
+    function LocationMarker() {
+        // const [position, setPosition] = useState<[number, number]>([0, 0]);
+
+        useMapEvents({  
+            click(e: LeafletMouseEvent) {
+                setSelectedPosition([e.latlng.lat, e.latlng.lng]);
+            }
+        });
+      
+        return selectedPosition === null ? null : (
+          <Marker position={selectedPosition} />
+        )
+    }
+
     return (
         <div id="page-create-point">
             <header>
@@ -134,15 +152,13 @@ const CreatePoint = () => {
                         <span>Selecione o endereço no mapa</span>
                     </legend>
 
-                    <MapContainer center={[-20.4177914, -42.9319562]} zoom={15} scrollWheelZoom={false}> 
+                    <MapContainer center={[-20.4237011,-42.9124945]} zoom={15}>
                         <TileLayer
-                            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                            attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
                             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                         />
-                        <Marker position={[-20.4177914, -42.9319562]}></Marker>
+                        <LocationMarker />
                     </MapContainer>
-
-
 
                     <div className="field-group">
                         <div className="field">
